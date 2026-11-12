@@ -1,22 +1,36 @@
 package com.alfha.discord_clone.user;
 
+import com.alfha.discord_clone.message.MessageRepository;
+import com.alfha.discord_clone.server.ServerMemberRepository;
+import com.alfha.discord_clone.server.ServerRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.SQLException;
 import java.util.List;
 
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
+    private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
 
-    // Constructor injection — Spring automatically provides UserRepository here
-    public UserService(UserRepository userRepository) {
+    private final UserRepository userRepository;
+    private final ServerRepository serverRepository;
+    private final ServerMemberRepository serverMemberRepository;
+    private final MessageRepository messageRepository;
+
+    public UserService(UserRepository userRepository, ServerRepository serverRepository,
+                       ServerMemberRepository serverMemberRepository, MessageRepository messageRepository) {
         this.userRepository = userRepository;
+        this.serverRepository = serverRepository;
+        this.serverMemberRepository = serverMemberRepository;
+        this.messageRepository = messageRepository;
     }
 
     public UserDto createUser(CreateUserRequest request) {
         User user = new User(request.getUsername(), request.getEmail(), request.getPassword());
-        User saved = userRepository.save(user);
-        return toDto(saved);
+        return saveUser(user);
     }
 
     public List<UserDto> getAllUsers() {
@@ -28,8 +42,46 @@ public class UserService {
 
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
         return toDto(user);
+    }
+
+    @Transactional
+    public UserDto updateUser(Long id, UpdateUserRequest request) {
+        User user = findUserForUpdate(id);
+        user.setUsername(request.username());
+        user.setEmail(request.email());
+        return saveUser(user);
+    }
+
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = findUserForUpdate(id);
+        if (serverRepository.existsByOwnerId(id)) {
+            throw new UserOwnsServerException();
+        }
+        if (messageRepository.existsByAuthorId(id)) {
+            throw new UserHasMessagesException();
+        }
+        serverMemberRepository.deleteByUserId(id);
+        userRepository.delete(user);
+    }
+
+    private User findUserForUpdate(Long id) {
+        return userRepository.findForUpdateById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    private UserDto saveUser(User user) {
+        try {
+            return toDto(userRepository.saveAndFlush(user));
+        } catch (DataIntegrityViolationException exception) {
+            if (exception.getMostSpecificCause() instanceof SQLException sqlException
+                    && UNIQUE_VIOLATION_SQL_STATE.equals(sqlException.getSQLState())) {
+                throw new DuplicateUserException(exception);
+            }
+            throw exception;
+        }
     }
 
     private UserDto toDto(User user) {
