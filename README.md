@@ -39,7 +39,7 @@ In IntelliJ IDEA, edit the application run configuration and set `DISCORD_DB_PAS
 
 Use `http://localhost:8080` as the base URL in Postman. `GET /health` should return `Backend is alive!`.
 
-Send `POST /api/users` with a JSON body. Use a new username and email for each run and a dummy password because the current app stores account passwords as plaintext.
+Send `POST /api/users` with a JSON body. Use a new username and email for each run and a dummy password for testing. New accounts store a BCrypt hash. Passwords must fit within 72 UTF-8 bytes. Some characters take more than one byte.
 
 ```json
 {
@@ -49,7 +49,7 @@ Send `POST /api/users` with a JSON body. Use a new username and email for each r
 }
 ```
 
-Successful creation returns `201 Created`. Follow the `Location` response header to fetch the new user, then check `GET /api/users` for the same user. Each response should omit the password. To confirm that PostgreSQL stored the user, connect with `psql -h localhost -U discord_user -d discord_clone` and run the query below.
+Successful creation returns `201 Created`. Follow the `Location` response header to fetch the new user, then check `GET /api/users` for the same user. The responses omit the password and its hash. To confirm that PostgreSQL stored the user, connect with `psql -h localhost -U discord_user -d discord_clone` and run the query below.
 
 ```sql
 SELECT id, username, email FROM users WHERE username = 'demo-user';

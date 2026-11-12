@@ -4,9 +4,11 @@ import com.alfha.discord_clone.message.MessageRepository;
 import com.alfha.discord_clone.server.ServerMemberRepository;
 import com.alfha.discord_clone.server.ServerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -14,22 +16,34 @@ import java.util.List;
 public class UserService {
 
     private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
+    private static final int BCRYPT_MAX_PASSWORD_BYTES = 72;
 
     private final UserRepository userRepository;
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final MessageRepository messageRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository, ServerRepository serverRepository,
-                       ServerMemberRepository serverMemberRepository, MessageRepository messageRepository) {
+                       ServerMemberRepository serverMemberRepository, MessageRepository messageRepository,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.serverRepository = serverRepository;
         this.serverMemberRepository = serverMemberRepository;
         this.messageRepository = messageRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserDto createUser(CreateUserRequest request) {
-        User user = new User(request.getUsername(), request.getEmail(), request.getPassword());
+        String password = request.getPassword();
+        if (password.indexOf('\0') >= 0 || !StandardCharsets.UTF_8.newEncoder().canEncode(password)) {
+            throw new InvalidPasswordException("Password must be valid Unicode text without null characters.");
+        }
+        if (password.getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_PASSWORD_BYTES) {
+            throw new InvalidPasswordException("Password must be at most 72 bytes in UTF-8.");
+        }
+        String passwordHash = passwordEncoder.encode(password);
+        User user = new User(request.getUsername(), request.getEmail(), passwordHash);
         return saveUser(user);
     }
 

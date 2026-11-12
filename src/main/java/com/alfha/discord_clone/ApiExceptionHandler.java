@@ -8,6 +8,7 @@ import com.alfha.discord_clone.server.ServerMemberNotFoundException;
 import com.alfha.discord_clone.server.ServerMembershipConflictException;
 import com.alfha.discord_clone.server.ServerNotFoundException;
 import com.alfha.discord_clone.user.DuplicateUserException;
+import com.alfha.discord_clone.user.InvalidPasswordException;
 import com.alfha.discord_clone.user.UserHasMessagesException;
 import com.alfha.discord_clone.user.UserNotFoundException;
 import com.alfha.discord_clone.user.UserOwnsServerException;
@@ -18,6 +19,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ProblemDetail handleInvalidPassword(InvalidPasswordException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
 
     @ExceptionHandler({UserNotFoundException.class, ServerNotFoundException.class,
             ServerMemberNotFoundException.class, ChannelNotFoundException.class, MessageNotFoundException.class})

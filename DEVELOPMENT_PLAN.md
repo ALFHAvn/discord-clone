@@ -23,7 +23,7 @@ Use Java 25, Spring Boot 4.1.1, and PostgreSQL 17 for the current setup. The loc
 
 User deletion returns `409` while the user owns a server or has authored messages. Successful deletion removes ordinary memberships in the same transaction.
 
-**Done when** the User endpoints work against PostgreSQL, the success and error cases have been checked, and no response contains a password. Keep test data local and disposable while passwords are stored as plaintext.
+**Done when** the User endpoints work against PostgreSQL, the success and error cases have been checked, and no response contains account credentials. Use disposable data for local checks.
 
 Suggested first commit message `Read the database password from the environment`.
 
@@ -57,7 +57,9 @@ Server deletion removes memberships in the same transaction. If the server still
 
 ## Phase 2 — Authentication and access control
 
-- [ ] Add password hashing with BCrypt, registration and login, and Spring Security with JWT. Agree on how to handle any existing local plaintext rows before enabling login.
+- [x] Add `org.springframework.security:spring-security-crypto` and hash new account passwords with BCrypt in the existing user creation flow. Live PostgreSQL checks verified that two accounts with the same password get different hashes, both hashes accept the correct password and reject an incorrect one, and API responses omit credentials.
+- [ ] Agree on how to handle existing plaintext credentials before enabling login. Use a fresh database if all existing data is disposable. If user and message history should be retained, preserve account IDs and replace legacy credentials through a password reset. Accept BCrypt credentials for login.
+- [ ] Add registration and login with Spring Security and JWT. Reuse the user creation flow for registration and use Spring Security to validate bearer tokens.
 - [ ] Use the authenticated user as the actor for protected operations. Check server membership for channel and message access, and enforce ownership for edits or deletes where appropriate. Review which user fields should be visible to other accounts.
 - [ ] Verify valid login, invalid credentials, expired tokens, missing authentication, and denied access between two accounts. Use `401` when authentication is missing or invalid and `403` when an authenticated account lacks permission.
 
