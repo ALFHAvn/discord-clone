@@ -1,5 +1,6 @@
 package com.alfha.discord_clone;
 
+import com.alfha.discord_clone.auth.InvalidCredentialsException;
 import com.alfha.discord_clone.channel.ChannelHasMessagesException;
 import com.alfha.discord_clone.channel.ChannelNotFoundException;
 import com.alfha.discord_clone.message.MessageNotFoundException;
@@ -19,6 +20,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    }
 
     @ExceptionHandler(InvalidPasswordException.class)
     public ProblemDetail handleInvalidPassword(InvalidPasswordException exception) {

@@ -23,17 +23,22 @@ CREATE DATABASE discord_clone OWNER discord_user;
 
 If the role still uses a password previously committed to Git, run `\password discord_user` as a PostgreSQL administrator and choose a new password.
 
-From the repository root, set `DISCORD_DB_PASSWORD` in the same PowerShell session you use to run Maven. Enter the password for `discord_user` when prompted.
+From the repository root, set `DISCORD_DB_PASSWORD` and `DISCORD_JWT_SECRET` in the PowerShell session you use to run Maven. Enter the password for `discord_user` when prompted. The command below generates a local JWT signing key. Generating a new key invalidates tokens signed with the previous key.
 
 ```powershell
 $password = Read-Host 'PostgreSQL password for discord_user' -AsSecureString
 $credential = [System.Management.Automation.PSCredential]::new('discord_user', $password)
 $env:DISCORD_DB_PASSWORD = $credential.GetNetworkCredential().Password
 Remove-Variable password,credential
+$jwtKey = [byte[]]::new(32)
+$random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+try { $random.GetBytes($jwtKey) } finally { $random.Dispose() }
+$env:DISCORD_JWT_SECRET = [Convert]::ToBase64String($jwtKey)
+Remove-Variable jwtKey,random
 .\mvnw.cmd spring-boot:run
 ```
 
-In IntelliJ IDEA, edit the application run configuration and set `DISCORD_DB_PASSWORD` under **Environment variables**. Keep that configuration local to your machine.
+In IntelliJ IDEA, set `DISCORD_DB_PASSWORD` and `DISCORD_JWT_SECRET` under **Environment variables** in the application run configuration. The JWT secret must be a Base64-encoded key of at least 32 random bytes. Keep the configuration local to your machine.
 
 ### Use a fresh database for authentication testing
 
@@ -51,11 +56,11 @@ $env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://localhost:5432/discord_clone_aut
 
 Start the app and create new dummy accounts. For the `psql` checks below, connect to `discord_clone_auth` when using this setup.
 
-## Check the User API
+## Register and log in
 
 Use `http://localhost:8080` as the base URL in Postman. `GET /health` should return `Backend is alive!`.
 
-Send `POST /api/users` with a JSON body. Use a new username and email for each run and a dummy password for testing. New accounts store a BCrypt hash. Passwords must fit within 72 UTF-8 bytes. Some characters take more than one byte.
+Send `POST /api/auth/register` with a JSON body. Use a new username and email for each run and a dummy password for testing. New accounts store a BCrypt hash. Passwords must fit within 72 UTF-8 bytes. Some characters take more than one byte.
 
 ```json
 {
@@ -65,7 +70,13 @@ Send `POST /api/users` with a JSON body. Use a new username and email for each r
 }
 ```
 
-Successful creation returns `201 Created`. Follow the `Location` response header to fetch the new user, then check `GET /api/users` for the same user. The responses omit the password and its hash. To confirm that PostgreSQL stored the user, connect with `psql -h localhost -U discord_user -d discord_clone` and run the query below.
+Successful registration returns `201 Created` with a `Location` header pointing to the new user's profile. The response omits the password and its hash.
+
+Send `POST /api/auth/login` with the same `email` and `password`. The response includes an `accessToken`, `tokenType` of `Bearer`, and `expiresIn` in seconds. The token expires after 15 minutes. In Postman, use **Authorization → Bearer Token** and paste `accessToken` to make protected requests. Invalid credentials and missing or invalid tokens return `401 Unauthorized`.
+
+## Check the User API
+
+Use the bearer token to fetch the new user from the registration response's `Location` header, then check `GET /api/users` for the same user. Use the bearer token for the User, Server, Channel, and Message checks below. To confirm that PostgreSQL stored the user, connect with `psql -h localhost -U discord_user -d discord_clone` and run the query below.
 
 ```sql
 SELECT id, username, email FROM users WHERE username = 'demo-user';

@@ -3,6 +3,7 @@ package com.alfha.discord_clone.server;
 import com.alfha.discord_clone.user.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest({ServerController.class, ServerMemberController.class})
+@AutoConfigureMockMvc(addFilters = false)
 class ServerControllerTest {
 
     private static final String VALID_REQUEST = """

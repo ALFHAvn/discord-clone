@@ -59,9 +59,9 @@ Server deletion removes memberships in the same transaction. If the server still
 
 - [x] Add `org.springframework.security:spring-security-crypto` and hash new account passwords with BCrypt in the existing user creation flow. Live PostgreSQL checks verified that two accounts with the same password get different hashes, both hashes accept the correct password and reject an incorrect one, and API responses omit credentials.
 - [x] Start authentication testing with a fresh development database. Existing data is disposable. Use the [separate database setup in the README](README.md#use-a-fresh-database-for-authentication-testing).
-- [ ] Add registration and login with Spring Security and JWT. Reuse the user creation flow for registration and use Spring Security to validate bearer tokens.
+- [x] Add registration and login with Spring Security and JWT. Registration reuses BCrypt user creation, and login issues a 15-minute bearer token. Tests against fresh PostgreSQL verified registration, valid login, and `401` for invalid credentials, missing or invalid tokens, expired tokens, and tokens for deleted accounts.
 - [ ] Use the authenticated user as the actor for protected operations. Check server membership for channel and message access, and enforce ownership for edits or deletes where appropriate. Review which user fields should be visible to other accounts.
-- [ ] Verify valid login, invalid credentials, expired tokens, missing authentication, and denied access between two accounts. Use `401` when authentication is missing or invalid and `403` when an authenticated account lacks permission.
+- [ ] Verify access rules with two accounts. Use `403` when an authenticated account lacks permission.
 
 **Done when** stored account passwords are hashes and protected operations enforce the caller's permissions. Complete this phase before exposing the API publicly.
 
