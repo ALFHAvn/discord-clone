@@ -58,7 +58,7 @@ Server deletion removes memberships in the same transaction. If the server still
 ## Phase 2 — Authentication and access control
 
 - [x] Add `org.springframework.security:spring-security-crypto` and hash new account passwords with BCrypt in the existing user creation flow. Live PostgreSQL checks verified that two accounts with the same password get different hashes, both hashes accept the correct password and reject an incorrect one, and API responses omit credentials.
-- [ ] Agree on how to handle existing plaintext credentials before enabling login. Use a fresh database if all existing data is disposable. If user and message history should be retained, preserve account IDs and replace legacy credentials through a password reset. Accept BCrypt credentials for login.
+- [x] Start authentication testing with a fresh development database. Existing data is disposable. Use the [separate database setup in the README](README.md#use-a-fresh-database-for-authentication-testing).
 - [ ] Add registration and login with Spring Security and JWT. Reuse the user creation flow for registration and use Spring Security to validate bearer tokens.
 - [ ] Use the authenticated user as the actor for protected operations. Check server membership for channel and message access, and enforce ownership for edits or deletes where appropriate. Review which user fields should be visible to other accounts.
 - [ ] Verify valid login, invalid credentials, expired tokens, missing authentication, and denied access between two accounts. Use `401` when authentication is missing or invalid and `403` when an authenticated account lacks permission.

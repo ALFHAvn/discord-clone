@@ -35,6 +35,22 @@ Remove-Variable password,credential
 
 In IntelliJ IDEA, edit the application run configuration and set `DISCORD_DB_PASSWORD` under **Environment variables**. Keep that configuration local to your machine.
 
+### Use a fresh database for authentication testing
+
+In `psql`, connect as the PostgreSQL administrator. After creating the `discord_user` role as shown above, create a separate database once.
+
+```sql
+CREATE DATABASE discord_clone_auth OWNER discord_user;
+```
+
+In the PowerShell session where you start the app, set this variable alongside `DISCORD_DB_PASSWORD`. In IntelliJ, add the same variable to the application run configuration.
+
+```powershell
+$env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://localhost:5432/discord_clone_auth'
+```
+
+Start the app and create new dummy accounts. For the `psql` checks below, connect to `discord_clone_auth` when using this setup.
+
 ## Check the User API
 
 Use `http://localhost:8080` as the base URL in Postman. `GET /health` should return `Backend is alive!`.
